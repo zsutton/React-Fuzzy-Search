@@ -2,7 +2,7 @@
   "name": "react-fuzzy-search",
   "version": "0.1.0",
   "description": "A fuzzy search input",
-  "main": "./build/index",
+  "main": "./src/index",
   "browserify": {
     "transform": [
       [
@@ -15,16 +15,31 @@
   },
   "dependencies": {
     "classnames": "^1.1.4",
+    "fast-levenshtein": "^1.0.6",
+    "priorityqueuejs": "^1.0.0",
     "react": "^0.12.2"
   },
   "devDependencies": {
     "browserify": "^9.0.3",
     "del": "^1.1.1",
-    "derequire": "^1.2.1",
     "gulp": "^3.8.11",
-    "gulp-derequire": "^2.0.0",
     "reactify": "^1.0.0",
-    "vinyl-source-stream": "^1.0.0",
-    "workerify": "^0.3.0"
-  }
+    "vinyl-source-stream": "^1.0.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zsutton/react-fuzzy-search.git"
+  },
+  "keywords": [
+    "search"
+  ],
+  "author": "Zac Sutton",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zsutton/react-fuzzy-search/issues"
+  },
+  "homepage": "https://github.com/zsutton/react-fuzzy-search"
 }
