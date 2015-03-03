@@ -1,0 +1,30 @@
+{
+  "name": "react-fuzzy-search",
+  "version": "0.1.0",
+  "description": "A fuzzy search input",
+  "main": "./build/index",
+  "browserify": {
+    "transform": [
+      [
+        "reactify",
+        {
+          "es6": true
+        }
+      ]
+    ]
+  },
+  "dependencies": {
+    "classnames": "^1.1.4",
+    "react": "^0.12.2"
+  },
+  "devDependencies": {
+    "browserify": "^9.0.3",
+    "del": "^1.1.1",
+    "derequire": "^1.2.1",
+    "gulp": "^3.8.11",
+    "gulp-derequire": "^2.0.0",
+    "reactify": "^1.0.0",
+    "vinyl-source-stream": "^1.0.0",
+    "workerify": "^0.3.0"
+  }
+}
