@@ -244,33 +244,6 @@ var worker = function(){
 	    }
 	}
 
-	/**
-		A quick and dirty Set optimized for size with
-		add, has, remove (rather than delete for IE8) and clear 
-	*/
-	function _Set(){
-		this.cache = {};
-	}
-
-	_Set.prototype.add = function(obj){
-		obj.__inset = Date.now();
-		this.cache[obj.__inset] = true;
-	}
-
-	_Set.prototype.has = function(obj){
-		return obj.__inset && this.cache[obj.__inset]
-	}
-
-	_Set.prototype.remove = function(obj){
-		delete this.cache[obj.__inset]
-		delete obj.__inset
-	}
-
-	_Set.prototype.clear = function(){
-		for(var item in this.cache)
-			delete this.cache[item].__inset
-	}
-
 	var _items;
 
 	self.addEventListener('message', function(e) {
@@ -283,11 +256,8 @@ var worker = function(){
 	    case 'search':
 	      self.postMessage('starting search');
 
-	      var addedItems = new _Set()
-	      var results = runSearch(data.searchTerms, _items, addedItems, data.opts)
+	      var results = runSearch(data.searchTerms, _items, data.opts)
 	      self.postMessage({ threadID: data.threadID, results: results })
-
-	      addedItems.clear()
 	      break;
 	    case 'stop':
 	      self.postMessage('stopped');
@@ -299,7 +269,7 @@ var worker = function(){
 	}, false);
 
 
-	function runSearch(searchTerms, items, addedItems, opts){
+	function runSearch(searchTerms, items, opts){
 		var queue = new PriorityQueue(function(a,b) { return a.dist - b.dist }),
 			results = [],
 			maxDist = -1,
@@ -356,20 +326,12 @@ var worker = function(){
 				dist += (searchTerms.length - item._searchValues.length) * 5;
 
 			if(queue.size() < opts.maxItems){
-				if(!addedItems.has(items[i])){
-					if(dist > maxDist)
-						maxDist = dist;
-					queue.enq({ item: item, dist: dist })
-					addedItems.add(item)
-				}
-				else{
-					while(item == items[i] && i < items.length)
-						i++;
-				}
+				if(dist > maxDist)
+					maxDist = dist;
+				queue.enq({ item: item, dist: dist })
 			}
 			else if(dist < maxDist){
-				addedItems.remove(queue.deq().item)
-				addedItems.add(item)
+				queue.deq()
 				maxDist = queue.peek().dist;
 				queue.enq({ item: item, dist: dist })
 			}

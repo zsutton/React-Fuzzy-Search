@@ -2,7 +2,6 @@ var React = require("react")
 var levenshtein = require("fast-levenshtein")
 var PriorityQueue = require('priorityqueuejs');
 var cx = require("classnames")
-var _Set = require("../utils/_Set")
 var containsNode = require("../utils/containsNode")
 
 var SearchWorker = require("../worker/worker")
@@ -266,7 +265,6 @@ var FuzzySearch = React.createClass({
 
 	runSearch: function(searchTerms){
 		var	queue = new PriorityQueue(function(a, b) { return a.dist - b.dist }),
-			addedItems = new _Set(),
 			results = [],
 			maxDist = -1,
 			cache = {};
@@ -323,20 +321,12 @@ var FuzzySearch = React.createClass({
 				dist += (searchTerms.length - item._searchValues.length) * 5;
 
 			if(queue.size() < this.props.maxItems){
-				if(!addedItems.has(this.state.items[i])){
-					if(dist > maxDist)
-						maxDist = dist;
-					queue.enq({ item, dist })
-					addedItems.add(item)
-				}
-				else{
-					while(item == this.state.items[i] && i < this.state.items.length)
-						i++;
-				}
+				if(dist > maxDist)
+					maxDist = dist;
+				queue.enq({ item, dist })
 			}
 			else if(dist < maxDist){
-				addedItems.remove(queue.deq().item)
-				addedItems.add(item)
+				queue.deq()
 				maxDist = queue.peek().dist;
 				queue.enq({ item, dist })
 			}
@@ -358,8 +348,6 @@ var FuzzySearch = React.createClass({
 			results,
 			searchTimes
 		})
-
-		addedItems.destroy();
 	},
 
 	search: function(e){
