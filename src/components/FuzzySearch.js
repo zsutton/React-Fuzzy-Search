@@ -2,6 +2,8 @@ var React = require("react")
 var levenshtein = require("fast-levenshtein")
 var PriorityQueue = require('priorityqueuejs');
 var cx = require("classnames")
+var _Set = require("../utils/_Set")
+var containsNode = require("../utils/containsNode")
 
 var SearchWorker = require("../worker/worker")
 var workerBlob = new Blob(['(' + SearchWorker.toString() + ')();'], {type: "text/javascript"});
@@ -9,43 +11,15 @@ var workerBlobURL = window.URL.createObjectURL(workerBlob);
 
 var punctuationRE = /[^\w ]/g
 
-function containsNode(parentNode, childNode) {
-	if('contains' in parentNode) {
-		return parentNode.contains(childNode);
-	}
-	else {
-		return parentNode.compareDocumentPosition(childNode) % 16;
-	}
-}
-
-function _Set(){
-	this.cache = Object.create ? Object.create(null) : {};
-}
-
-_Set.prototype.add = function(obj){
-	obj.__inset = Date.now();
-	this.cache[obj.__inset] = true;
-}
-
-_Set.prototype.has = function(obj){
-	return obj.__inset && this.cache[obj.__inset]
-}
-
-_Set.prototype.remove = function(obj){
-	delete this.cache[obj.__inset]
-	delete obj.__inset
-}
-
-_Set.prototype.destroy = function(){
-	for(var item in this.cache)
-		delete this.cache[item].__inset
-}
-
 function computeSearchValues(items, opts){
 	var { field, delim, removePunctuation, useWebWorkers, searchLowerCase, threadCount } = opts;
 
 	var _searchItems = [],
 		slices = [];
+
+	items = typeof items.toArray  == "function" ?
+		items.toArray() :
+		items;
 
 	items.forEach(function(item){
 		var _searchValues = [],
