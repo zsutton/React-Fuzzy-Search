@@ -304,7 +304,7 @@ var FuzzySearch = React.createClass({
 						if(useSubstr)
 							searchValue = searchValue.substr(0, searchTerm.length);
 
-						if(cache[searchTerm] && cache[searchTerm][searchValue])
+						if(cache[searchTerm][searchValue])
 							curDist = cache[searchTerm][searchValue]
 						else
 							curDist = cache[searchTerm][searchValue] = levenshtein.get(searchTerm, searchValue)
