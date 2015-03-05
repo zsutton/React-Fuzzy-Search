@@ -447,9 +447,6 @@ var FuzzySearchTime = React.createClass({
 	render: function () {
 		var timing = this.props.timing
 
-		if(timing && timing.end)
-			console.log(timing.searchTerm, timing.end - timing.start)
-
 		return timing && timing.searchTerm ?
 			<span>
 				{ timing.end ? 

@@ -250,12 +250,9 @@ var worker = function(){
 	  var data = e.data;
 	  switch (data.cmd) {
 	    case 'setData':
-	      self.postMessage('setting data search');
 	      _items = data.items;
 	      break;
 	    case 'search':
-	      self.postMessage('starting search');
-
 	      var results = runSearch(data.searchTerms, _items, data.opts)
 	      self.postMessage({ threadID: data.threadID, results: results })
 	      break;
