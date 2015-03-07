@@ -891,11 +891,33 @@ var worker = function(){
 		https://github.com/janogonzalez/priorityqueuejs
 		MIT
 	*/
+
+
+	/**
+	 * Initializes a new empty `PriorityQueue` with the given `comparator(a, b)`
+	 * function, uses `.DEFAULT_COMPARATOR()` when no function is provided.
+	 *
+	 * The comparator function must return a positive number when `a > b`, 0 when
+	 * `a == b` and a negative number when `a < b`.
+	 *
+	 * @param {Function}
+	 * @return {PriorityQueue}
+	 * @api public
+	 */
 	function PriorityQueue(comparator) {
 	  this._comparator = comparator || PriorityQueue.DEFAULT_COMPARATOR;
 	  this._elements = [];
 	}
 
+	/**
+	 * Compares `a` and `b`, when `a > b` it returns a positive number, when
+	 * it returns 0 and when `a < b` it returns a negative number.
+	 *
+	 * @param {String|Number} a
+	 * @param {String|Number} b
+	 * @return {Number}
+	 * @api public
+	 */
 	PriorityQueue.DEFAULT_COMPARATOR = function(a, b) {
 	  if (typeof a === 'number' && typeof b === 'number') {
 	    return a - b;
@@ -909,16 +931,36 @@ var worker = function(){
 	  }
 	};
 
+	/**
+	 * Returns whether the priority queue is empty or not.
+	 *
+	 * @return {Boolean}
+	 * @api public
+	 */
 	PriorityQueue.prototype.isEmpty = function() {
 	  return this.size() === 0;
 	};
 
+	/**
+	 * Peeks at the top element of the priority queue.
+	 *
+	 * @return {Object}
+	 * @throws {Error} when the queue is empty.
+	 * @api public
+	 */
 	PriorityQueue.prototype.peek = function() {
 	  if (this.isEmpty()) throw new Error('PriorityQueue is empty');
 
 	  return this._elements[0];
 	};
 
+	/**
+	 * Dequeues the top element of the priority queue.
+	 *
+	 * @return {Object}
+	 * @throws {Error} when the queue is empty.
+	 * @api public
+	 */
 	PriorityQueue.prototype.deq = function() {
 	  var first = this.peek();
 	  var last = this._elements.pop();
@@ -951,6 +993,13 @@ var worker = function(){
 	  return first;
 	};
 
+	/**
+	 * Enqueues the `element` at the priority queue and returns its new size.
+	 *
+	 * @param {Object} element
+	 * @return {Number}
+	 * @api public
+	 */
 	PriorityQueue.prototype.enq = function(element) {
 	  var size = this._elements.push(element);
 	  var current = size - 1;
@@ -967,91 +1016,113 @@ var worker = function(){
 	  return size;
 	};
 
+	/**
+	 * Returns the size of the priority queue.
+	 *
+	 * @return {Number}
+	 * @api public
+	 */
 	PriorityQueue.prototype.size = function() {
 	  return this._elements.length;
 	};
 
+	/**
+	 *  Iterates over queue elements
+	 *
+	 *  @param {Function} fn
+	 */
 	PriorityQueue.prototype.forEach = function(fn) {
 	  return this._elements.forEach(fn);
 	};
 
+	/**
+	 * Compares the values at position `a` and `b` in the priority queue using its
+	 * comparator function.
+	 *
+	 * @param {Number} a
+	 * @param {Number} b
+	 * @return {Number}
+	 * @api private
+	 */
 	PriorityQueue.prototype._compare = function(a, b) {
 	  return this._comparator(this._elements[a], this._elements[b]);
 	};
 
+	/**
+	 * Swaps the values at position `a` and `b` in the priority queue.
+	 *
+	 * @param {Number} a
+	 * @param {Number} b
+	 * @api private
+	 */
 	PriorityQueue.prototype._swap = function(a, b) {
 	  var aux = this._elements[a];
 	  this._elements[a] = this._elements[b];
 	  this._elements[b] = aux;
 	};
 
-	/**
-	fast-levenshtein
-	https://github.com/hiddentao/fast-levenshtein
+	JaroWinkler = {
+		weight: 0.1,
 
-	(MIT License)
+		get: function(str1, str2){
+			str1 = str1.toLowerCase();
+			str2 = str2.toLowerCase();
 
-	Copyright (c) 2013 Ramesh Nair
+			var jaroDist;
+			if(str1 == str2)
+				jaroDist = 1;
+			else{
+				var matchWindow = Math.max(0, Math.floor(Math.max(str1.length, str2.length)/2-1)),
+					negMatchWindow = matchWindow * -1,
+					matchLetter = [],
+					transpositions = 0,
+					matches = 0,
+					start = 0,
+					mismatch = 0;
+		  
+				if(matchWindow){
+					for (var i = 0; i < str2.length; i++){
+						var dist = str1.indexOf(str2[i], i - matchWindow)- i
 
-	Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+						if((dist > -1 && dist < matchWindow) || (dist < 0 && dist > negMatchWindow)){
+							matches += 1
+							if(dist != 0){
+								matchLetter.push(str2[i])
+							}
+						}
+					}
 
-	The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+					for (var i = 0; i < str1.length; i++){
+						var dist = str2.indexOf(str1[i], i - matchWindow) - i
 
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-	*/
+						if((dist > 0 && dist < matchWindow) || (dist < 0 && dist > negMatchWindow)){
+							if(str1[i] != matchLetter[mismatch++])
+								transpositions+=1
+						}
+					}
+				}
+				else{
+					for (var i = 0; i < str2.length; i++){
+						if(str1 == str2[i])
+							matches += 1
+					}
+				}
 
-	var levenshtein = {
-	    /**
-	     * Calculate levenshtein distance of the two strings.
-	     *
-	     * @param str1 String the first string.
-	     * @param str2 String the second string.
-	     * @return Integer the levenshtein distance (0 and above).
-	     */
-	    get: function(str1, str2) {
-	      // base cases
-	      if (str1 === str2) return 0;
-	      if (str1.length === 0) return str2.length;
-	      if (str2.length === 0) return str1.length;
+				jaroDist = ((matches / str1.length) + (matches / str2.length) + ((matches - Math.floor(transpositions / 2)) / matches)) / 3
+			}
 
-	      // two rows
-	      var prevRow  = new Array(str2.length + 1),
-	          curCol, nextCol, i, j, tmp;
+			// count the number of matching characters up to 4
+			var matches = 0
+			for(var i = 0; i < 4; i++) {
+				if(str1[i]==str2[i])
+					matches += 1
+				else
+					break
+			}
 
-	      // initialise previous row
-	      for (i=0; i<prevRow.length; ++i) {
-	        prevRow[i] = i;
-	      }
-
-	      // calculate current row distance from previous row
-	      for (i=0; i<str1.length; ++i) {
-	        nextCol = i + 1;
-
-	        for (j=0; j<str2.length; ++j) {
-	          curCol = nextCol;
-
-	          // substution
-	          nextCol = prevRow[j] + ( (str1.charAt(i) === str2.charAt(j)) ? 0 : 1 );
-	          // insertion
-	          tmp = curCol + 1;
-	          if (nextCol > tmp) {
-	            nextCol = tmp;
-	          }
-	          // deletion
-	          tmp = prevRow[j + 1] + 1;
-	          if (nextCol > tmp) {
-	            nextCol = tmp;
-	          }
-
-	          prevRow[j] = curCol;
-	        }
-
-	        prevRow[j] = nextCol;
-	      }
-
-	      return nextCol;
-	    }
-	}
+			return jaroDist + (matches * this.weight * (1 - jaroDist));
+		}
+	};
 
 	var _items;
 
@@ -1076,18 +1147,19 @@ var worker = function(){
 
 
 	function runSearch(searchTerms, items, opts){
-		var queue = new PriorityQueue(function(a,b) { return a.dist - b.dist }),
+		debugger;
+		var queue = new PriorityQueue(function(a,b) { return b.dist - a.dist }),
 			results = [],
-			maxDist = -1,
+			minDist = 10000,
 			cache = {};
 
 		for(var i = 0; i < items.length; i++){
 			var item = items[i],
-				dist = 0;
+				totalDist = 0;
 
 			for(var j = 0; j < searchTerms.length; j++){
 				var searchTerm= searchTerms[j],
-					minDist = 10000;
+					maxDist = 0;
 
 				cache[searchTerm] = cache[searchTerm] || {}
 
@@ -1095,60 +1167,37 @@ var worker = function(){
 					var searchValue = item._searchValues[k],	
 						curDist;
 
-					/*
-						Special case for an exact match
-					*/
+					if(cache[searchTerm][searchValue])
+						curDist = cache[searchTerm][searchValue]
+					else
+						curDist = cache[searchTerm][searchValue] = JaroWinkler.get(searchTerm, searchValue)
 
-					if(searchValue == searchTerm){
-						minDist = -1;
-						break;
-					}
-					else{
-						/*
-							searchWithSubstringWhenLessThan is a number that will use a substring 
-							of the original value's length rather than the full. Useful in cases 
-							where e.g. searching for wag is a closer match to zac than wagoner
-						*/
-						var useSubstr = opts.searchWithSubstring ||
-							(searchTerm.length <= opts.searchWithSubstringWhenLessThan && searchValue.length > opts.searchWithSubstringWhenLessThan);
-
-						if(useSubstr)
-							searchValue = searchValue.substr(0, searchTerm.length);
-
-						if(cache[searchTerm][searchValue])
-							curDist = cache[searchTerm][searchValue]
-						else
-							curDist = cache[searchTerm][searchValue] = levenshtein.get(searchTerm, searchValue)
-					}
-
-					if(curDist < minDist)
-						minDist = curDist;
+					if(curDist > maxDist)
+						maxDist = curDist;
 				}
 
-				dist += minDist;
+				totalDist += maxDist;
 			}
 
 			if(item._searchValues.length < searchTerms.length)
-				dist += (searchTerms.length - item._searchValues.length) * 5;
+				totalDist -= (searchTerms.length - item._searchValues.length) * 0.1;
 
 			if(queue.size() < opts.maxItems){
-				if(dist > maxDist)
-					maxDist = dist;
-				queue.enq({ item: item, dist: dist })
+				if(totalDist < minDist)
+					minDist = totalDist;
+				queue.enq({ item: item, dist: totalDist })
 			}
-			else if(dist < maxDist){
+			else if(totalDist < minDist){
 				queue.deq()
-				maxDist = queue.peek().dist;
-				queue.enq({ item: item, dist: dist })
+				minDist = queue.peek().dist;
+				queue.enq({ item: item, dist: totalDist })
 			}
 		}
 
 		while(queue.size()){
 			var _res = queue.deq();
-			if(_res.dist < opts.maxDist){
-				_res.item._score = _res.dist;
-				results.unshift(_res.item)
-			}
+			_res.item._score = _res.dist;
+			results.unshift(_res.item)
 		}
 
 		return results;
