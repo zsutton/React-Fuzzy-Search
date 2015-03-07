@@ -1,7 +1,7 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.FuzzySearch = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 module.exports = require("./components/FuzzySearch.js")
 
-},{"./components/FuzzySearch.js":5}],2:[function(require,module,exports){
+},{"./components/FuzzySearch.js":4}],2:[function(require,module,exports){
 function classNames() {
 	var args = arguments;
 	var classes = [];
@@ -32,206 +32,6 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 },{}],3:[function(require,module,exports){
-(function() {
-  'use strict';
-
-  /**
-   * Extend an Object with another Object's properties.
-   *
-   * The source objects are specified as additional arguments.
-   *
-   * @param dst Object the object to extend.
-   *
-   * @return Object the final object.
-   */
-  var _extend = function(dst) {
-    var sources = Array.prototype.slice.call(arguments, 1);
-    for (var i=0; i<sources.length; ++i) {
-      var src = sources[i];
-      for (var p in src) {
-        if (src.hasOwnProperty(p)) dst[p] = src[p];
-      }
-    }
-    return dst;
-  };
-
-  /**
-   * Based on the algorithm at http://en.wikipedia.org/wiki/Levenshtein_distance.
-   */
-  var Levenshtein = {
-    /**
-     * Calculate levenshtein distance of the two strings.
-     *
-     * @param str1 String the first string.
-     * @param str2 String the second string.
-     * @return Integer the levenshtein distance (0 and above).
-     */
-    get: function(str1, str2) {
-      // base cases
-      if (str1 === str2) return 0;
-      if (str1.length === 0) return str2.length;
-      if (str2.length === 0) return str1.length;
-
-      // two rows
-      var prevRow  = new Array(str2.length + 1),
-          curCol, nextCol, i, j, tmp;
-
-      // initialise previous row
-      for (i=0; i<prevRow.length; ++i) {
-        prevRow[i] = i;
-      }
-
-      // calculate current row distance from previous row
-      for (i=0; i<str1.length; ++i) {
-        nextCol = i + 1;
-
-        for (j=0; j<str2.length; ++j) {
-          curCol = nextCol;
-
-          // substution
-          nextCol = prevRow[j] + ( (str1.charAt(i) === str2.charAt(j)) ? 0 : 1 );
-          // insertion
-          tmp = curCol + 1;
-          if (nextCol > tmp) {
-            nextCol = tmp;
-          }
-          // deletion
-          tmp = prevRow[j + 1] + 1;
-          if (nextCol > tmp) {
-            nextCol = tmp;
-          }
-
-          // copy current col value into previous (in preparation for next iteration)
-          prevRow[j] = curCol;
-        }
-
-        // copy last col value into previous (in preparation for next iteration)
-        prevRow[j] = nextCol;
-      }
-
-      return nextCol;
-    },
-
-    /**
-     * Asynchronously calculate levenshtein distance of the two strings.
-     *
-     * @param str1 String the first string.
-     * @param str2 String the second string.
-     * @param cb Function callback function with signature: function(Error err, int distance)
-     * @param [options] Object additional options.
-     * @param [options.progress] Function progress callback with signature: function(percentComplete)
-     */
-    getAsync: function(str1, str2, cb, options) {
-      options = _extend({}, {
-        progress: null
-      }, options);
-
-      // base cases
-      if (str1 === str2) return cb(null, 0);
-      if (str1.length === 0) return cb(null, str2.length);
-      if (str2.length === 0) return cb(null, str1.length);
-
-      // two rows
-      var prevRow  = new Array(str2.length + 1),
-          curCol, nextCol,
-          i, j, tmp,
-          startTime, currentTime;
-
-      // initialise previous row
-      for (i=0; i<prevRow.length; ++i) {
-        prevRow[i] = i;
-      }
-
-      nextCol = 1;
-      i = 0;
-      j = -1;
-
-      var __calculate = function() {
-        // reset timer
-        startTime = new Date().valueOf();
-        currentTime = startTime;
-
-        // keep going until one second has elapsed
-        while (currentTime - startTime < 1000) {
-          // reached end of current row?
-          if (str2.length <= (++j)) {
-            // copy current into previous (in preparation for next iteration)
-            prevRow[j] = nextCol;
-
-            // if already done all chars
-            if (str1.length <= (++i)) {
-              return cb(null, nextCol);
-            }
-            // else if we have more left to do
-            else {
-              nextCol = i + 1;
-              j = 0;
-            }
-          }
-
-          // calculation
-          curCol = nextCol;
-
-          // substution
-          nextCol = prevRow[j] + ( (str1.charAt(i) === str2.charAt(j)) ? 0 : 1 );
-          // insertion
-          tmp = curCol + 1;
-          if (nextCol > tmp) {
-            nextCol = tmp;
-          }
-          // deletion
-          tmp = prevRow[j + 1] + 1;
-          if (nextCol > tmp) {
-            nextCol = tmp;
-          }
-
-          // copy current into previous (in preparation for next iteration)
-          prevRow[j] = curCol;
-
-          // get current time
-          currentTime = new Date().valueOf();
-        }
-
-        // send a progress update?
-        if (null !== options.progress) {
-          try {
-            options.progress.call(null, (i * 100.0/ str1.length));
-          } catch (err) {
-            return cb('Progress callback: ' + err.toString());
-          }
-        }
-
-        // next iteration
-        setTimeout(__calculate(), 0);
-      };
-
-      __calculate();
-    }
-
-  };
-
-  // amd
-  if (typeof define !== "undefined" && define !== null && define.amd) {
-    define(function() {
-      return Levenshtein;
-    });
-  }
-  // commonjs
-  else if (typeof module !== "undefined" && module !== null) {
-    module.exports = Levenshtein;
-  }
-  // web worker
-  else if (typeof self !== "undefined" && typeof self.postMessage === 'function' && typeof self.importScripts === 'function') {
-    self.Levenshtein = Levenshtein;
-  }
-  // browser main thread
-  else if (typeof window !== "undefined" && window !== null) {
-    window.Levenshtein = Levenshtein;
-  }
-}());
-
-
-},{}],4:[function(require,module,exports){
 /**
  * Expose `PriorityQueue`.
  */
@@ -405,16 +205,17 @@ PriorityQueue.prototype._swap = function(a, b) {
   this._elements[b] = aux;
 };
 
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 var React = require("react")
-var levenshtein = require("fast-levenshtein")
 var PriorityQueue = require('priorityqueuejs');
 var cx = require("classnames")
 var containsNode = require("../utils/containsNode")
+var JaroWinkler = require("../utils/JaroWinkler")
 
 var SearchWorker = require("../worker/worker")
 var workerBlob = new Blob(['(' + SearchWorker.toString() + ')();'], {type: "text/javascript"});
 var workerBlobURL = window.URL.createObjectURL(workerBlob);
+
 
 var punctuationRE = /[^\w ]/g
 
@@ -553,7 +354,7 @@ var FuzzySearch = React.createClass({displayName: "FuzzySearch",
 			if(this.state.searchingAsync && this._asyncSearchComplete()){
 				var results = this.state.threadResults[this.state.threadID]
 									.reduce(function(acc, res) { return acc.concat(res) }, [])
-									.sort(function(a,b) { return a._score - b._score })
+									.sort(function(a,b) { return b._score - a._score })
 
 				var searchTimes = this.state.searchTimes
 				searchTimes[this.state.threadID].end = performance.now()
@@ -672,80 +473,58 @@ var FuzzySearch = React.createClass({displayName: "FuzzySearch",
 	},
 
 	runSearch: function(searchTerms){
-		var	queue = new PriorityQueue(function(a, b) { return a.dist - b.dist }),
+		var queue = new PriorityQueue(function(a,b) { return b.dist - a.dist }),
 			results = [],
-			maxDist = -1,
+			minDist = 10000,
 			cache = {};
-
 
 		for(var i = 0; i < this.state.items.length; i++){
 			var item = this.state.items[i],
-				dist = 0;
+				totalDist = 0;
 
 			for(var j = 0; j < searchTerms.length; j++){
 				var searchTerm= searchTerms[j],
-					minDist = 10000;
+					maxDist = 0;
 
 				cache[searchTerm] = cache[searchTerm] || {}
 
 				for(var k = 0; k < item._searchValues.length; k++){
-					var searchValue = item._searchValues[k],
+					var searchValue = item._searchValues[k],	
 						curDist;
 
-					/*
-						Special case for an exact match
-					*/
+					if(searchTerm == searchValue)
+						curDist = 1.33
+					else if(cache[searchTerm][searchValue])
+						curDist = cache[searchTerm][searchValue]
+					else
+						curDist = cache[searchTerm][searchValue] = JaroWinkler.get(searchTerm, searchValue)
 
-					if(searchValue == searchTerm){
-						minDist = -1;
-						break;
-					}
-					else{
-						/*
-							searchWithSubstringWhenLessThan is a number that will use a substring 
-							of the original value's length rather than the full. Useful in cases 
-							where e.g. searching for wag is a closer match to zac than wagoner
-						*/
-						var useSubstr = this.props.searchWithSubstring ||
-							(searchTerm.length <= this.props.searchWithSubstringWhenLessThan && searchValue.length > this.props.searchWithSubstringWhenLessThan);
-
-						if(useSubstr)
-							searchValue = searchValue.substr(0, searchTerm.length);
-
-						if(cache[searchTerm][searchValue])
-							curDist = cache[searchTerm][searchValue]
-						else
-							curDist = cache[searchTerm][searchValue] = levenshtein.get(searchTerm, searchValue)
-					}
-
-					if(curDist < minDist)
-						minDist = curDist;
+					if(curDist > maxDist)
+						maxDist = curDist;
 				}
 
-				dist += minDist;
+				totalDist += maxDist;
 			}
 
 			if(item._searchValues.length < searchTerms.length)
-				dist += (searchTerms.length - item._searchValues.length) * 5;
+				totalDist -= (searchTerms.length - item._searchValues.length) * 0.1;
 
 			if(queue.size() < this.props.maxItems){
-				if(dist > maxDist)
-					maxDist = dist;
-				queue.enq({ item:item, dist:dist })
+				if(totalDist < minDist)
+					minDist = totalDist;
+				queue.enq({ item: item, dist: totalDist })
 			}
-			else if(dist < maxDist){
+			else if(totalDist < minDist){
 				queue.deq()
-				maxDist = queue.peek().dist;
-				queue.enq({ item:item, dist:dist })
+				minDist = queue.peek().dist;
+				queue.enq({ item: item, dist: totalDist })
 			}
 		}
 
 		while(queue.size()){
 			var _res = queue.deq();
-			if(_res.dist < this.props.maxDist){
-				_res.item._score = _res.dist;
-				results.unshift(_res.item)
-			}
+			_res.item._score = _res.dist;
+			results.unshift(_res.item)
 		}
 
 
@@ -807,7 +586,7 @@ var FuzzySearch = React.createClass({displayName: "FuzzySearch",
 	startSearch: function(){
 		var searchTerms = this.state.searchTerm
 				.split(" ")
-				.filter(function(term) { return term.length > 1 })
+				.filter(function(term) { return term.length > 0 })
 				.map(function(term) { return term.toLowerCase() });
 
 		if(this.props.useWebWorkers){
@@ -872,7 +651,78 @@ var FuzzySearchTime = React.createClass({displayName: "FuzzySearchTime",
 module.exports = FuzzySearch;
 
 
-},{"../utils/containsNode":6,"../worker/worker":7,"classnames":2,"fast-levenshtein":3,"priorityqueuejs":4,"react":"react"}],6:[function(require,module,exports){
+},{"../utils/JaroWinkler":5,"../utils/containsNode":6,"../worker/worker":7,"classnames":2,"priorityqueuejs":3,"react":"react"}],5:[function(require,module,exports){
+module.exports = {
+	weight: 0.1,
+
+	get: function(str1, str2){
+		str1 = str1.toLowerCase();
+		str2 = str2.toLowerCase();
+
+		var jaroDist;
+		if(str1 == str2)
+			jaroDist = 1;
+		else if(!str1.length || !str2.length)
+			jaroDist = 0
+		else{
+			var matchWindow = Math.max(0, Math.floor(Math.max(str1.length, str2.length)/2-1)),
+				str1Flags = new Array(str1.length),
+				str2Flags = new Array(str2.length),
+				matches = 0;
+	  
+			for(var i = 0; i < str1.length; i += 1){
+				var start = i > matchWindow ? i - matchWindow : 0,
+					end = i + matchWindow < str2.length ? i + matchWindow : str2.length - 1;
+
+				for(var j = start; j < end + 1; j++){
+					if(!str2Flags[j] && str2[j] == str1[i]){
+						str1Flags[i] = str2Flags[j] = true;
+						matches++;
+						break;
+					}
+				}
+			}
+
+			if(!matches){
+				jaroDist = 0;
+			}
+			else{
+				var transpositions = 0,
+					str2Offset = 0;
+
+				for(var i = 0; i < str1Flags.length; i++){
+					if(str1Flags[i]){
+						for(var j = str2Offset; j < str2.length; j++){
+							if(str2Flags[j]){
+								str2Offset = j + 1
+								break
+							}
+						}
+						if(str1Flags[i] != str2Flags[j])
+							transpositions += 1
+					}
+				}
+
+				transpositions /= 2
+
+				jaroDist = ((matches / str1.length) + (matches / str2.length) + ((matches - transpositions) / matches)) / 3
+			}
+		}
+
+		// count the number of matching characters up to 4
+		var matches = 0
+		for(var i = 0; i < 4; i++) {
+			if(str1[i]==str2[i])
+				matches += 1
+			else
+				break
+		}
+
+		return jaroDist + (matches * this.weight * (1 - jaroDist));
+	}
+};
+
+},{}],6:[function(require,module,exports){
 function containsNode(parentNode, childNode) {
 	if('contains' in parentNode) {
 		return parentNode.contains(childNode);
@@ -1061,7 +911,7 @@ var worker = function(){
 	  this._elements[b] = aux;
 	};
 
-	JaroWinkler = {
+	var JaroWinkler = {
 		weight: 0.1,
 
 		get: function(str1, str2){
@@ -1071,44 +921,51 @@ var worker = function(){
 			var jaroDist;
 			if(str1 == str2)
 				jaroDist = 1;
+			else if(!str1.length || !str2.length)
+				jaroDist = 0
 			else{
 				var matchWindow = Math.max(0, Math.floor(Math.max(str1.length, str2.length)/2-1)),
-					negMatchWindow = matchWindow * -1,
-					matchLetter = [],
-					transpositions = 0,
-					matches = 0,
-					start = 0,
-					mismatch = 0;
+					str1Flags = new Array(str1.length),
+					str2Flags = new Array(str2.length),
+					matches = 0;
 		  
-				if(matchWindow){
-					for (var i = 0; i < str2.length; i++){
-						var dist = str1.indexOf(str2[i], i - matchWindow)- i
+				for(var i = 0; i < str1.length; i += 1){
+					var start = i > matchWindow ? i - matchWindow : 0,
+						end = i + matchWindow < str2.length ? i + matchWindow : str2.length - 1;
 
-						if((dist > -1 && dist < matchWindow) || (dist < 0 && dist > negMatchWindow)){
-							matches += 1
-							if(dist != 0){
-								matchLetter.push(str2[i])
-							}
+					for(var j = start; j < end + 1; j++){
+						if(!str2Flags[j] && str2[j] == str1[i]){
+							str1Flags[i] = str2Flags[j] = true;
+							matches++;
+							break;
 						}
 					}
+				}
 
-					for (var i = 0; i < str1.length; i++){
-						var dist = str2.indexOf(str1[i], i - matchWindow) - i
-
-						if((dist > 0 && dist < matchWindow) || (dist < 0 && dist > negMatchWindow)){
-							if(str1[i] != matchLetter[mismatch++])
-								transpositions+=1
-						}
-					}
+				if(!matches){
+					jaroDist = 0;
 				}
 				else{
-					for (var i = 0; i < str2.length; i++){
-						if(str1 == str2[i])
-							matches += 1
-					}
-				}
+					var transpositions = 0,
+						str2Offset = 0;
 
-				jaroDist = ((matches / str1.length) + (matches / str2.length) + ((matches - Math.floor(transpositions / 2)) / matches)) / 3
+					for(var i = 0; i < str1Flags.length; i++){
+						if(str1Flags[i]){
+							for(var j = str2Offset; j < str2.length; j++){
+								if(str2Flags[j]){
+									str2Offset = j + 1
+									break
+								}
+							}
+							if(str1Flags[i] != str2Flags[j])
+								transpositions += 1
+						}
+					}
+
+					transpositions /= 2
+
+					jaroDist = ((matches / str1.length) + (matches / str2.length) + ((matches - transpositions) / matches)) / 3
+				}
 			}
 
 			// count the number of matching characters up to 4
@@ -1147,7 +1004,6 @@ var worker = function(){
 
 
 	function runSearch(searchTerms, items, opts){
-		debugger;
 		var queue = new PriorityQueue(function(a,b) { return b.dist - a.dist }),
 			results = [],
 			minDist = 10000,
@@ -1167,7 +1023,9 @@ var worker = function(){
 					var searchValue = item._searchValues[k],	
 						curDist;
 
-					if(cache[searchTerm][searchValue])
+					if(searchTerm == searchValue)
+						curDist = 1.33
+					else if(cache[searchTerm][searchValue])
 						curDist = cache[searchTerm][searchValue]
 					else
 						curDist = cache[searchTerm][searchValue] = JaroWinkler.get(searchTerm, searchValue)

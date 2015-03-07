@@ -1,12 +1,13 @@
 var React = require("react")
-var levenshtein = require("fast-levenshtein")
 var PriorityQueue = require('priorityqueuejs');
 var cx = require("classnames")
 var containsNode = require("../utils/containsNode")
+var JaroWinkler = require("../utils/JaroWinkler")
 
 var SearchWorker = require("../worker/worker")
 var workerBlob = new Blob(['(' + SearchWorker.toString() + ')();'], {type: "text/javascript"});
 var workerBlobURL = window.URL.createObjectURL(workerBlob);
+
 
 var punctuationRE = /[^\w ]/g
 
@@ -145,7 +146,7 @@ var FuzzySearch = React.createClass({
 			if(this.state.searchingAsync && this._asyncSearchComplete()){
 				var results = this.state.threadResults[this.state.threadID]
 									.reduce(function(acc, res) { return acc.concat(res) }, [])
-									.sort(function(a,b) { return a._score - b._score })
+									.sort(function(a,b) { return b._score - a._score })
 
 				var searchTimes = this.state.searchTimes
 				searchTimes[this.state.threadID].end = performance.now()
@@ -264,80 +265,58 @@ var FuzzySearch = React.createClass({
 	},
 
 	runSearch: function(searchTerms){
-		var	queue = new PriorityQueue(function(a, b) { return a.dist - b.dist }),
+		var queue = new PriorityQueue(function(a,b) { return b.dist - a.dist }),
 			results = [],
-			maxDist = -1,
+			minDist = 10000,
 			cache = {};
-
 
 		for(var i = 0; i < this.state.items.length; i++){
 			var item = this.state.items[i],
-				dist = 0;
+				totalDist = 0;
 
 			for(var j = 0; j < searchTerms.length; j++){
 				var searchTerm= searchTerms[j],
-					minDist = 10000;
+					maxDist = 0;
 
 				cache[searchTerm] = cache[searchTerm] || {}
 
 				for(var k = 0; k < item._searchValues.length; k++){
-					var searchValue = item._searchValues[k],
+					var searchValue = item._searchValues[k],	
 						curDist;
 
-					/*
-						Special case for an exact match
-					*/
+					if(searchTerm == searchValue)
+						curDist = 1.33
+					else if(cache[searchTerm][searchValue])
+						curDist = cache[searchTerm][searchValue]
+					else
+						curDist = cache[searchTerm][searchValue] = JaroWinkler.get(searchTerm, searchValue)
 
-					if(searchValue == searchTerm){
-						minDist = -1;
-						break;
-					}
-					else{
-						/*
-							searchWithSubstringWhenLessThan is a number that will use a substring 
-							of the original value's length rather than the full. Useful in cases 
-							where e.g. searching for wag is a closer match to zac than wagoner
-						*/
-						var useSubstr = this.props.searchWithSubstring ||
-							(searchTerm.length <= this.props.searchWithSubstringWhenLessThan && searchValue.length > this.props.searchWithSubstringWhenLessThan);
-
-						if(useSubstr)
-							searchValue = searchValue.substr(0, searchTerm.length);
-
-						if(cache[searchTerm][searchValue])
-							curDist = cache[searchTerm][searchValue]
-						else
-							curDist = cache[searchTerm][searchValue] = levenshtein.get(searchTerm, searchValue)
-					}
-
-					if(curDist < minDist)
-						minDist = curDist;
+					if(curDist > maxDist)
+						maxDist = curDist;
 				}
 
-				dist += minDist;
+				totalDist += maxDist;
 			}
 
 			if(item._searchValues.length < searchTerms.length)
-				dist += (searchTerms.length - item._searchValues.length) * 5;
+				totalDist -= (searchTerms.length - item._searchValues.length) * 0.1;
 
 			if(queue.size() < this.props.maxItems){
-				if(dist > maxDist)
-					maxDist = dist;
-				queue.enq({ item, dist })
+				if(totalDist < minDist)
+					minDist = totalDist;
+				queue.enq({ item: item, dist: totalDist })
 			}
-			else if(dist < maxDist){
+			else if(totalDist < minDist){
 				queue.deq()
-				maxDist = queue.peek().dist;
-				queue.enq({ item, dist })
+				minDist = queue.peek().dist;
+				queue.enq({ item: item, dist: totalDist })
 			}
 		}
 
 		while(queue.size()){
 			var _res = queue.deq();
-			if(_res.dist < this.props.maxDist){
-				_res.item._score = _res.dist;
-				results.unshift(_res.item)
-			}
+			_res.item._score = _res.dist;
+			results.unshift(_res.item)
 		}
 
 
@@ -399,7 +378,7 @@ var FuzzySearch = React.createClass({
 	startSearch: function(){
 		var searchTerms = this.state.searchTerm
 				.split(" ")
-				.filter(function(term) { return term.length > 1 })
+				.filter(function(term) { return term.length > 0 })
 				.map(function(term) { return term.toLowerCase() });
 
 		if(this.props.useWebWorkers){

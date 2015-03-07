@@ -174,7 +174,7 @@ var worker = function(){
 	  this._elements[b] = aux;
 	};
 
-	JaroWinkler = {
+	var JaroWinkler = {
 		weight: 0.1,
 
 		get: function(str1, str2){
@@ -184,44 +184,51 @@ var worker = function(){
 			var jaroDist;
 			if(str1 == str2)
 				jaroDist = 1;
+			else if(!str1.length || !str2.length)
+				jaroDist = 0
 			else{
 				var matchWindow = Math.max(0, Math.floor(Math.max(str1.length, str2.length)/2-1)),
-					negMatchWindow = matchWindow * -1,
-					matchLetter = [],
-					transpositions = 0,
-					matches = 0,
-					start = 0,
-					mismatch = 0;
+					str1Flags = new Array(str1.length),
+					str2Flags = new Array(str2.length),
+					matches = 0;
 		  
-				if(matchWindow){
-					for (var i = 0; i < str2.length; i++){
-						var dist = str1.indexOf(str2[i], i - matchWindow)- i
+				for(var i = 0; i < str1.length; i += 1){
+					var start = i > matchWindow ? i - matchWindow : 0,
+						end = i + matchWindow < str2.length ? i + matchWindow : str2.length - 1;
 
-						if((dist > -1 && dist < matchWindow) || (dist < 0 && dist > negMatchWindow)){
-							matches += 1
-							if(dist != 0){
-								matchLetter.push(str2[i])
-							}
+					for(var j = start; j < end + 1; j++){
+						if(!str2Flags[j] && str2[j] == str1[i]){
+							str1Flags[i] = str2Flags[j] = true;
+							matches++;
+							break;
 						}
 					}
+				}
 
-					for (var i = 0; i < str1.length; i++){
-						var dist = str2.indexOf(str1[i], i - matchWindow) - i
-
-						if((dist > 0 && dist < matchWindow) || (dist < 0 && dist > negMatchWindow)){
-							if(str1[i] != matchLetter[mismatch++])
-								transpositions+=1
-						}
-					}
+				if(!matches){
+					jaroDist = 0;
 				}
 				else{
-					for (var i = 0; i < str2.length; i++){
-						if(str1 == str2[i])
-							matches += 1
-					}
-				}
+					var transpositions = 0,
+						str2Offset = 0;
 
-				jaroDist = ((matches / str1.length) + (matches / str2.length) + ((matches - Math.floor(transpositions / 2)) / matches)) / 3
+					for(var i = 0; i < str1Flags.length; i++){
+						if(str1Flags[i]){
+							for(var j = str2Offset; j < str2.length; j++){
+								if(str2Flags[j]){
+									str2Offset = j + 1
+									break
+								}
+							}
+							if(str1Flags[i] != str2Flags[j])
+								transpositions += 1
+						}
+					}
+
+					transpositions /= 2
+
+					jaroDist = ((matches / str1.length) + (matches / str2.length) + ((matches - transpositions) / matches)) / 3
+				}
 			}
 
 			// count the number of matching characters up to 4
@@ -260,7 +267,6 @@ var worker = function(){
 
 
 	function runSearch(searchTerms, items, opts){
-		debugger;
 		var queue = new PriorityQueue(function(a,b) { return b.dist - a.dist }),
 			results = [],
 			minDist = 10000,
@@ -280,7 +286,9 @@ var worker = function(){
 					var searchValue = item._searchValues[k],	
 						curDist;
 
-					if(cache[searchTerm][searchValue])
+					if(searchTerm == searchValue)
+						curDist = 1.33
+					else if(cache[searchTerm][searchValue])
 						curDist = cache[searchTerm][searchValue]
 					else
 						curDist = cache[searchTerm][searchValue] = JaroWinkler.get(searchTerm, searchValue)
