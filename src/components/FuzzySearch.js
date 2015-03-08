@@ -5,14 +5,12 @@ var containsNode = require("../utils/containsNode")
 var JaroWinkler = require("../utils/JaroWinkler")
 
 var SearchWorker = require("../worker/worker")
-var workerBlob = new Blob(['(' + SearchWorker.toString() + ')();'], {type: "text/javascript"});
-var workerBlobURL = window.URL.createObjectURL(workerBlob);
 
 
 var punctuationRE = /[^\w ]/g
 
 function computeSearchValues(items, opts){
-	var { field, delim, removePunctuation, useWebWorkers, searchLowerCase, threadCount } = opts;
+	var { field, delim, immutable, removePunctuation, useWebWorkers, searchLowerCase, threadCount } = opts;
 
 	var _searchItems = [],
 		slices = [];
@@ -47,7 +45,7 @@ function computeSearchValues(items, opts){
 	/**
 		If we're using web workers split them computed search data into equal chunks per thread
 	*/
-	if(useWebWorkers){
+	if(useWebWorkers && immutable){
 		for(var i = 0; i < threadCount; i++){
 			var start = Math.floor(i * (_searchItems.length / threadCount)),
 				end = Math.floor((i + 1) * (_searchItems.length / threadCount))
@@ -69,8 +67,7 @@ var FuzzySearchResult = React.createClass({
 	render: function(){
 		var attr = this.props.item,
 			classes = cx({
-				"fuzzy-search-result": true,
-				"hover-blue": this.props.selectItem
+				"fuzzy-search-result": true
 			})
 
 		return (
@@ -118,6 +115,7 @@ var FuzzySearch = React.createClass({
 		return {
 			containerClassName: "",
 			delim: " ",
+			immutable: true,
 			maxDist: 15,
 			maxItems: 25,
 			resultsComponent: FuzzySearchResult,
@@ -180,6 +178,9 @@ var FuzzySearch = React.createClass({
 	_createWorkers: function(){
 		if(this.props.useWebWorkers){
 			this._threads = [];
+			
+			var workerBlob = new Blob(['(' + SearchWorker.toString() + ')();'], {type: "text/javascript"});
+			var workerBlobURL = window.URL.createObjectURL(workerBlob);
 
 			for(var i = 0; i < this.props.threadCount; i++){
 				var worker = new Worker(workerBlobURL);
@@ -234,14 +235,6 @@ var FuzzySearch = React.createClass({
 						this.state.searchTerm
 					}
 				/>
-
-				{ this.props.showTimes &&
-					<span>
-						<FuzzySearchTime
-							timing={this.state.searchTimes[this.state.threadID]}
-						/>
-					</span>
-				}
 				
 				{ this.state.active &&
 					<ul className="fuzzy-results-cont">
@@ -321,7 +314,7 @@ var FuzzySearch = React.createClass({
 
 
 		var	searchTimes = this.state.searchTimes;
-		searchTimes[this.state.threadID].end = performance.now()
+		searchTimes[this.state.threadID].end = Date.now()
 
 		this.setState({
 			results,
@@ -335,7 +328,7 @@ var FuzzySearch = React.createClass({
 			searchTimes = this.state.searchTimes;
 
 		threadResults[threadID] = []
-		searchTimes[threadID] = { searchTerm: e.target.value, start: performance.now() }
+		searchTimes[threadID] = { searchTerm: e.target.value, start: Date.now() }
 
 		this.setState({
 			searching: true,
@@ -390,9 +383,7 @@ var FuzzySearch = React.createClass({
 					cmd: "search",
 					opts: {
 						maxDist: this.props.maxDist,
-						maxItems: this.props.maxItems,
-						searchWithSubstring: this.props.searchWithSubstring,
-						searchWithSubstringWhenLessThan: this.props.searchWithSubstringWhenLessThan
+						maxItems: this.props.maxItems
 					},
 					searchTerms,
 					threadID: this.state.threadID
@@ -403,8 +394,14 @@ var FuzzySearch = React.createClass({
 				searchingAsync: true
 			})
 		}
-		else
+		else if(!this.props.immutable){
+			this.setState(computeSearchValues(this.props.items, this.props), function(){
+				this.runSearch(searchTerms);
+			})
+		}
+		else{
 			this.runSearch(searchTerms);
+		}
 	},
 
 	onWorkerMessage: function(e){
@@ -419,23 +416,6 @@ var FuzzySearch = React.createClass({
 				this.setState({ threadResults })
 			}
 		}	
-	}
-})
-
-var FuzzySearchTime = React.createClass({
-	render: function () {
-		var timing = this.props.timing
-
-		return timing && timing.searchTerm ?
-			<span>
-				{ timing.end ? 
-					" - searching for " + timing.searchTerm + " took " + (timing.end - timing.start).toFixed(1) + "ms"
-			 	:
-					" - searching for " + timing.searchTerm
-				}
-			</span>
-		:
-			<span />
 	}
 })
 
