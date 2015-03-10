@@ -6,6 +6,8 @@ var JaroWinkler = require("../utils/JaroWinkler")
 
 var SearchWorker = require("../worker/worker")
 
+// temporarily disabling IE10
+var _canUseWorkers = !!window.Worker && /MSIE/i.test(navigator.userAgent);
 
 var punctuationRE = /[^\w ]/g
 
@@ -65,13 +67,10 @@ function computeSearchValues(items, opts){
 
 var FuzzySearchResult = React.createClass({
 	render: function(){
-		var attr = this.props.item,
-			classes = cx({
-				"fuzzy-search-result": true
-			})
+		var attr = this.props.item;
 
 		return (
-			<li className={classes} onClick={this.props.selectItem && this.select} style={this.props.style}>
+			<li className="fuzzy-search-result" onClick={this.props.selectItem && this.select} style={this.props.style}>
 				<div className="inline-top" style={{ paddingLeft: 4, marginTop:2 }}>
 					<div>
 						{ attr[this.props.nameField] + (this.props.showScore ? this.props.score : '' ) }
@@ -95,7 +94,6 @@ var FuzzySearch = React.createClass({
 			computing: true,
 			results: [],
 			searchTerm: "",
-			searchTimes: {},
 			threadID: 0,
 			threadResults: {}
 		}
@@ -105,7 +103,7 @@ var FuzzySearch = React.createClass({
 		this._computeData()
 
 		if(this.props.initialSelectedID){
-			var selectedItem = this.props.items.filter(function (item) { return item[this.props.idField] == this.props.initialSelectedID})
+			var selectedItem = this.props.items.filter(function (item) { return item[this.props.idField] == this.props.initialSelectedID}.bind(this))
 			if(selectedItem.length === 1)
 				this.setState({ selectedItem: selectedItem[0] });
 		}
@@ -146,13 +144,9 @@ var FuzzySearch = React.createClass({
 									.reduce(function(acc, res) { return acc.concat(res) }, [])
 									.sort(function(a,b) { return b._score - a._score })
 
-				var searchTimes = this.state.searchTimes
-				searchTimes[this.state.threadID].end = performance.now()
-
 				this.setState({
 					results: results.slice(0, this.props.maxItems),
-					searchingAsync: false,
-					searchTimes
+					searchingAsync: false
 				})
 			}
 		}
@@ -176,23 +170,41 @@ var FuzzySearch = React.createClass({
 	},
 
 	_createWorkers: function(){
-		if(this.props.useWebWorkers){
+		if(this.props.useWebWorkers && _canUseWorkers){
 			this._threads = [];
 			
-			var workerBlob = new Blob(['(' + SearchWorker.toString() + ')();'], {type: "text/javascript"});
+			var workerBlob;
+			try{
+				workerBlob = new Blob(['(' + SearchWorker.toString() + ')();'], {type: "text/javascript"});
+			}
+			catch(e){
+				var BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
+				blob = new BlobBuilder();
+				blob.append(SearchWorker.toString());
+				workerBlob = blob.getBlob();
+			}
+			
 			var workerBlobURL = window.URL.createObjectURL(workerBlob);
 
 			for(var i = 0; i < this.props.threadCount; i++){
-				var worker = new Worker(workerBlobURL);
+				var worker;
+				try{
+					worker = new Worker(workerBlobURL);
 
-				worker.onmessage = this.onWorkerMessage;
+					worker.onmessage = this.onWorkerMessage;
 
-				worker.postMessage({
-					cmd: "setData",
-					items: this.state.slices[i]
-				})
+					worker.postMessage({
+						cmd: "setData",
+						items: this.state.slices[i]
+					})
 
-				this._threads.push({ worker })
+					this._threads.push({ worker })
+					}
+				catch(e){
+					// if(e.code == 18){
+						// TODO: handle IE10 security error
+					// }
+				}
 			}
 		}
 
@@ -212,7 +224,7 @@ var FuzzySearch = React.createClass({
 		var items = this.state.searchTerm.length ?
 				this.state.results :
 				this.state.items ?
-					this.state.items.slice(0, this.props.maxItems) :
+					this.state.items :
 					[],
 			inactive = this.state.selectedItem && !this.state.active,
 			inpClasses = cx({
@@ -312,28 +324,20 @@ var FuzzySearch = React.createClass({
 			results.unshift(_res.item)
 		}
 
-
-		var	searchTimes = this.state.searchTimes;
-		searchTimes[this.state.threadID].end = Date.now()
-
 		this.setState({
-			results,
-			searchTimes
+			results
 		})
 	},
 
 	search: function(e){
 		var threadID = this.state.threadID + 1,
-			threadResults = {},
-			searchTimes = this.state.searchTimes;
+			threadResults = {};
 
 		threadResults[threadID] = []
-		searchTimes[threadID] = { searchTerm: e.target.value, start: Date.now() }
 
 		this.setState({
 			searching: true,
 			searchTerm: e.target.value,
-			searchTimes,
 			threadID,
 			threadResults
 		}, this.startSearch)
@@ -374,7 +378,7 @@ var FuzzySearch = React.createClass({
 				.filter(function(term) { return term.length > 0 })
 				.map(function(term) { return term.toLowerCase() });
 
-		if(this.props.useWebWorkers){
+		if(this.props.useWebWorkers && _canUseWorkers){
 			for(var i = 0; i < this.props.threadCount; i++){
 				var worker = this._threads[i].worker,
 					slice = this.state.slices[i]
