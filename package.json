@@ -1,6 +1,6 @@
 {
   "name": "react-fuzzy-search",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A fuzzy search input",
   "main": "./src/index",
   "browserify": {
