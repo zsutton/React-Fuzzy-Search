@@ -4,7 +4,7 @@ React Fuzzy Search
 About
 -----
 
-An approximate search component. FuzzySearch allows a user to search data using any possible matching words, regardless of order, and with a best match searching algorithm that allows for misspellings and typos. For example, given a dataset with "March 16th Safety and Awareness Training, Room 217" a search for "Saferty Training" (note the typo) will rate it as a top result (assuming no better matches).
+An approximate search component. FuzzySearch allows a user to search data using search terms (in any order) with a best match searching algorithm that allows for misspellings and typos. For example, given a dataset with "March 16th Safety and Awareness Training, Room 217" a search for "Saferty Training 217" (note the typo) will rate it as a top result (assuming no better matches).
 
 ## Installation
 
@@ -17,22 +17,27 @@ Note: This component is written using CommonJS modules. Unfortunately, both Brow
 ## Usage Notes
 
 ```javascript
-	var FuzzySearch = require("react-fuzzy-search")
+        var FuzzySearch = require("react-fuzzy-search")
 
-	...
+        ...
 
-	<FuzzySearch
-		idField="id" // The name of the id (or other field) per object in the items array to use as a key property for results)
-        items={peopleSearchData} // An array (or Immutable.js List)
-        field="name" // The name of the property to search
-        immutable={true} // Defaults to true. See note below
-        nameField="name" // The name of the property to display as results
-        placeholder="Search..." 
-        removePunctuation={true} // If true remove punctuation from the search field
-        showScore={false} // If true show the calculated score next to each result. For debugging
-        threadCount={2} // If using webworkers, the number of threads
-        useWebWorkers={true} // Internally FuzzySearch will check for web worker support so this can be set for all browsers.
-	/>
+        <FuzzySearch
+          containerClassName="extra-class" // Default "". An optional extra class for the wrapper component
+          idField="id" // The name of the id (or other field) per object in the items array to use as a key property for results)
+          items={peopleSearchData} // An array (or Immutable.js List)
+          field="name" // The name of the property to search
+          immutable={true} // Defaults to true. See note below
+          initialSelectedID={-1} // Default undefined. 
+          nameField="name" // The name of the property to display as results
+          maxUnfilteredItems={100} // The number of item to display when not searching
+          minScore={.7} // The minimum score to place in the list. minScore is multiplied by the number of search terms.
+          onChange={this.onSearchChange} // Item selected callback
+          placeholder="Search..." 
+          removePunctuation={true} // If true remove punctuation from the search field
+          showScore={false} // If true show the calculated score next to each result. For debugging
+          threadCount={2} // If using webworkers, the number of threads
+          useWebWorkers={true} // Internally FuzzySearch will check for web worker support so this can be set for all browsers.
+        />
 
 ```
 
@@ -55,3 +60,6 @@ Alternatively, immutable can be set to false and items can be updated in place. 
 
 ## Support
 Chrome, Firefox, IE>=8.
+
+#### Web worker support
+Due to IE10 throwing a SecurityError when using Blobs with web workers they are disabled IE <11. 
