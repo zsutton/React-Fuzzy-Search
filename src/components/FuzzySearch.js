@@ -1,4 +1,4 @@
-var React = require("react")
+var React = require("react");
 var PriorityQueue = require('priorityqueuejs');
 var cx = require("classnames")
 var containsNode = require("../utils/containsNode")
@@ -7,7 +7,7 @@ var JaroWinkler = require("../utils/JaroWinkler")
 var SearchWorker = require("../worker/worker")
 
 // temporarily disabling IE10
-var _canUseWorkers = !!window.Worker && /MSIE/i.test(navigator.userAgent);
+var _canUseWorkers = !!window.Worker && !/MSIE/i.test(navigator.userAgent);
 
 var punctuationRE = /[^\w ]/g
 
@@ -116,6 +116,7 @@ var FuzzySearch = React.createClass({
 			immutable: true,
 			maxDist: 15,
 			maxItems: 25,
+			minScore: .7,
 			resultsComponent: FuzzySearchResult,
 			searchLowerCase: true,
 			threadCount: 2,
@@ -140,8 +141,16 @@ var FuzzySearch = React.createClass({
 			}
 
 			if(this.state.searchingAsync && this._asyncSearchComplete()){
+				/*
+					Minimum score is a value [0,1] multiplied by the number of search terms. So,
+					if there are 3 search terms and the minScore is .7 a result's score would need
+					to be at least 2.1
+				*/
+				var minScore = this.props.minScore * this.getSearchTerms().length;
+				
 				var results = this.state.threadResults[this.state.threadID]
 									.reduce(function(acc, res) { return acc.concat(res) }, [])
+									.filter(function(res) { return res._score > minScore })
 									.sort(function(a,b) { return b._score - a._score })
 
 				this.setState({
@@ -268,20 +277,29 @@ var FuzzySearch = React.createClass({
 			</span>
 		);
 	},
+	
+	getSearchTerms: function(){
+		return this.state.searchTerm
+				.split(" ")
+				.filter(function(term) { return term.length > 0 })
+				.map(function(term) { return term.toLowerCase() });
+	},
 
 	runSearch: function(searchTerms){
 		var queue = new PriorityQueue(function(a,b) { return b.dist - a.dist }),
 			results = [],
-			minDist = 10000,
+			minDist = 0,
 			cache = {};
 
 		for(var i = 0; i < this.state.items.length; i++){
 			var item = this.state.items[i],
-				totalDist = 0;
+				totalDist = 0,
+				flagged = {};
 
 			for(var j = 0; j < searchTerms.length; j++){
-				var searchTerm= searchTerms[j],
-					maxDist = 0;
+				var searchTerm = searchTerms[j],
+					maxDist = 0,
+					flagPos;
 
 				cache[searchTerm] = cache[searchTerm] || {}
 
@@ -289,39 +307,47 @@ var FuzzySearch = React.createClass({
 					var searchValue = item._searchValues[k],	
 						curDist;
 
-					if(searchTerm == searchValue)
-						curDist = 1.33
+					if(searchTerm == searchValue){
+						if(!flagged[j]){
+							flagPos = j;
+							maxDist = 1.1
+							break;
+						}
+					}
 					else if(cache[searchTerm][searchValue])
 						curDist = cache[searchTerm][searchValue]
 					else
 						curDist = cache[searchTerm][searchValue] = JaroWinkler.get(searchTerm, searchValue)
 
-					if(curDist > maxDist)
+					if(curDist > maxDist && (!flagged[j] || curDist > flagged[j])){
+						flagPos = j;
 						maxDist = curDist;
+					}
 				}
-
+				
+				flagged[flagPos] = maxDist;
 				totalDist += maxDist;
 			}
-
-			if(item._searchValues.length < searchTerms.length)
-				totalDist -= (searchTerms.length - item._searchValues.length) * 0.1;
 
 			if(queue.size() < this.props.maxItems){
 				if(totalDist < minDist)
 					minDist = totalDist;
 				queue.enq({ item: item, dist: totalDist })
 			}
-			else if(totalDist < minDist){
+			else if(totalDist > minDist){
 				queue.deq()
 				minDist = queue.peek().dist;
 				queue.enq({ item: item, dist: totalDist })
 			}
 		}
 
+		var minScore = this.props.minScore * searchTerms.length;
 		while(queue.size()){
 			var _res = queue.deq();
-			_res.item._score = _res.dist;
-			results.unshift(_res.item)
+			if(_res.dist > minScore){
+				_res.item._score = _res.dist;
+				results.unshift(_res.item)
+			}
 		}
 
 		this.setState({
@@ -373,10 +399,7 @@ var FuzzySearch = React.createClass({
 	},
 
 	startSearch: function(){
-		var searchTerms = this.state.searchTerm
-				.split(" ")
-				.filter(function(term) { return term.length > 0 })
-				.map(function(term) { return term.toLowerCase() });
+		var searchTerms = this.getSearchTerms();
 
 		if(this.props.useWebWorkers && _canUseWorkers){
 			for(var i = 0; i < this.props.threadCount; i++){

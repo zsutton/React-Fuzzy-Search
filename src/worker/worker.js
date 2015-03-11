@@ -269,16 +269,18 @@ var worker = function(){
 	function runSearch(searchTerms, items, opts){
 		var queue = new PriorityQueue(function(a,b) { return b.dist - a.dist }),
 			results = [],
-			minDist = 10000,
+			minDist = 0,
 			cache = {};
 
 		for(var i = 0; i < items.length; i++){
 			var item = items[i],
-				totalDist = 0;
+				totalDist = 0,
+				flagged = {};
 
 			for(var j = 0; j < searchTerms.length; j++){
-				var searchTerm= searchTerms[j],
-					maxDist = 0;
+				var searchTerm = searchTerms[j],
+					maxDist = 0,
+					flagPos;
 
 				cache[searchTerm] = cache[searchTerm] || {}
 
@@ -286,29 +288,34 @@ var worker = function(){
 					var searchValue = item._searchValues[k],	
 						curDist;
 
-					if(searchTerm == searchValue)
-						curDist = 1.33
+					if(searchTerm == searchValue){
+						if(!flagged[j]){
+							flagPos = j;
+							maxDist = 1.1
+							break;
+						}
+					}
 					else if(cache[searchTerm][searchValue])
 						curDist = cache[searchTerm][searchValue]
 					else
 						curDist = cache[searchTerm][searchValue] = JaroWinkler.get(searchTerm, searchValue)
 
-					if(curDist > maxDist)
+					if(curDist > maxDist && (!flagged[j] || curDist > flagged[j])){
+						flagPos = j;
 						maxDist = curDist;
+					}
 				}
-
+				
+				flagged[flagPos] = maxDist;
 				totalDist += maxDist;
 			}
-
-			if(item._searchValues.length < searchTerms.length)
-				totalDist -= (searchTerms.length - item._searchValues.length) * 0.1;
 
 			if(queue.size() < opts.maxItems){
 				if(totalDist < minDist)
 					minDist = totalDist;
 				queue.enq({ item: item, dist: totalDist })
 			}
-			else if(totalDist < minDist){
+			else if(totalDist > minDist){
 				queue.deq()
 				minDist = queue.peek().dist;
 				queue.enq({ item: item, dist: totalDist })
