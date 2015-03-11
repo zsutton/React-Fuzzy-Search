@@ -230,11 +230,7 @@ var FuzzySearch = React.createClass({
 	},
 
 	render: function () {
-		var items = this.state.searchTerm.length ?
-				this.state.results :
-				this.state.items ?
-					this.state.items :
-					[],
+		var items = this.getItems(),
 			inactive = this.state.selectedItem && !this.state.active,
 			inpClasses = cx({
 				"fuzzy-inp": true,
@@ -278,6 +274,23 @@ var FuzzySearch = React.createClass({
 		);
 	},
 	
+	getItems: function(){
+		if(this.state.searchTerm.length){
+			return this.state.results
+		}
+		else{
+			if(this.state.items){
+				if(this.props.maxUnfilteredItems)
+					return this.state.items.slice(0, this.props.maxUnfilteredItems)
+				else
+					return this.state.items;
+			}
+
+		}
+		
+		return [];
+	},
+
 	getSearchTerms: function(){
 		return this.state.searchTerm
 				.split(" ")
