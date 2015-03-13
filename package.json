@@ -1,6 +1,6 @@
 {
   "name": "react-fuzzy-search",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "A fuzzy search input",
   "main": "./src/index",
   "browserify": {
@@ -32,9 +32,9 @@
     "url": "https://github.com/zsutton/react-fuzzy-search.git"
   },
   "keywords": [
-    "search", 
-	"react",
-	"react-component"
+    "search",
+    "react",
+    "react-component"
   ],
   "author": "Zac Sutton",
   "license": "MIT",
