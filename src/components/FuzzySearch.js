@@ -12,7 +12,9 @@ var _canUseWorkers = !!window.Worker && !/MSIE/i.test(navigator.userAgent);
 var punctuationRE = /[^\w ]/g
 
 function computeSearchValues(items, opts){
-	var { field, delim, immutable, removePunctuation, useWebWorkers, searchLowerCase, threadCount } = opts;
+	var { field, searchField, delim, immutable, removePunctuation, useWebWorkers, searchLowerCase, threadCount } = opts;
+
+	searchField = searchField || field;
 
 	var _searchItems = [],
 		slices = [];
@@ -26,12 +28,12 @@ function computeSearchValues(items, opts){
 			added = {};
 		_searchItems.push({ _originalItem: item, _searchValues })
 
-		var searchField = item[field]
+		var curSearchField = item[searchField]
 
 		if(removePunctuation)
-			searchField = searchField.replace(punctuationRE, "")
+			curSearchField = curSearchField.replace(punctuationRE, "")
 
-		searchField.split(delim).forEach(function(term){
+		curSearchField.split(delim).forEach(function(term){
 			var _term = searchLowerCase ? term.toLowerCase() : term
 
 			/**
@@ -67,13 +69,11 @@ function computeSearchValues(items, opts){
 
 var FuzzySearchResult = React.createClass({
 	render: function(){
-		var attr = this.props.item;
-
 		return (
 			<li className="fuzzy-search-result" onClick={this.props.selectItem && this.select} style={this.props.style}>
 				<div className="inline-top" style={{ paddingLeft: 4, marginTop:2 }}>
 					<div>
-						{ attr[this.props.nameField] + (this.props.showScore ? this.props.score : '' ) }
+						{ this.props.item[this.props.nameField] + (this.props.showScore ? this.props.score : '' ) }
 					</div>
 				</div>
 			</li>
@@ -114,7 +114,6 @@ var FuzzySearch = React.createClass({
 			containerClassName: "",
 			delim: " ",
 			immutable: true,
-			maxDist: 15,
 			maxItems: 25,
 			minScore: .7,
 			resultsComponent: FuzzySearchResult,
@@ -142,8 +141,8 @@ var FuzzySearch = React.createClass({
 
 			if(this.state.searchingAsync && this._asyncSearchComplete()){
 				/*
-					Minimum score is a value [0,1] multiplied by the number of search terms. So,
-					if there are 3 search terms and the minScore is .7 a result's score would need
+					Minimum score is a value [0,1] multiplied by the number of search terms. If 
+					there are 3 search terms and the minScore is .7 a result's score would need
 					to be at least 2.1
 				*/
 				var minScore = this.props.minScore * this.getSearchTerms().length;
@@ -171,6 +170,7 @@ var FuzzySearch = React.createClass({
 	},
 
 	_asyncSearchComplete: function(){
+		// check if all threads have returned a result
 		return this.state.threadResults[this.state.threadID].length == this.props.threadCount
 	},
 
@@ -215,6 +215,8 @@ var FuzzySearch = React.createClass({
 					// }
 				}
 			}
+
+			window.URL.revokeObjectURL(workerBlob);
 		}
 
 		if(this.state.searchTerm.length) 
@@ -338,6 +340,10 @@ var FuzzySearch = React.createClass({
 					}
 				}
 				
+				/*
+					Worth noting that flagging is crude and only works in one direction. A search term can be a top match
+					for a search value and then supplanted by a later search term but its maxDist will not be recalculated.
+				*/
 				flagged[flagPos] = maxDist;
 				totalDist += maxDist;
 			}
@@ -355,6 +361,7 @@ var FuzzySearch = React.createClass({
 		}
 
 		var minScore = this.props.minScore * searchTerms.length;
+
 		while(queue.size()){
 			var _res = queue.deq();
 			if(_res.dist > minScore){
@@ -415,6 +422,9 @@ var FuzzySearch = React.createClass({
 		var searchTerms = this.getSearchTerms();
 
 		if(this.props.useWebWorkers && _canUseWorkers){
+			/*
+				Each new state.searchTerm gets a threadID by which the web workers results will be tracked. 
+			*/
 			for(var i = 0; i < this.props.threadCount; i++){
 				var worker = this._threads[i].worker,
 					slice = this.state.slices[i]
@@ -422,7 +432,6 @@ var FuzzySearch = React.createClass({
 				worker.postMessage({
 					cmd: "search",
 					opts: {
-						maxDist: this.props.maxDist,
 						maxItems: this.props.maxItems
 					},
 					searchTerms,

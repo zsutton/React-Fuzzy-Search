@@ -20,7 +20,6 @@
   },
   "devDependencies": {
     "browserify": "^9.0.3",
-    "del": "^1.1.1",
     "gulp": "^3.8.11",
     "reactify": "^1.0.0",
     "vinyl-source-stream": "^1.0.0"
@@ -33,7 +32,9 @@
     "url": "https://github.com/zsutton/react-fuzzy-search.git"
   },
   "keywords": [
-    "search"
+    "search", 
+	"react",
+	"react-component"
   ],
   "author": "Zac Sutton",
   "license": "MIT",
