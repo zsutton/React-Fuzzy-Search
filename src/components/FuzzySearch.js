@@ -162,6 +162,7 @@ var FuzzySearch = React.createClass({
 
 	componentWillUnmount: function(){
 		this._closeWorkers();
+		document.removeEventListener("click", this._checkForClose)
 	},
 
 	_checkForClose: function (e) {
@@ -180,6 +181,7 @@ var FuzzySearch = React.createClass({
 
 	_createWorkers: function(){
 		if(this.props.useWebWorkers && _canUseWorkers){
+			this._closeWorkers();
 			this._threads = [];
 			
 			var workerBlob;
@@ -226,7 +228,8 @@ var FuzzySearch = React.createClass({
 	_closeWorkers: function(){
 		if(this.props.useWebWorkers && this._threads){
 			this._threads.forEach(function(thread){
-				thread.worker.terminate();
+				if(thread.worker && thread.worker.terminate)
+					thread.worker.terminate();
 			})
 		}
 	},
