@@ -3,29 +3,29 @@
   "version": "0.2.7",
   "description": "A fuzzy search input",
   "main": "./src/index",
-  "browserify": {
-    "transform": [
-      [
-        "reactify",
-        {
-          "es6": true
-        }
-      ]
-    ]
-  },
   "dependencies": {
     "classnames": "^1.1.4",
     "priorityqueuejs": "^1.0.0",
-    "react": "^0.12.2"
+    "react": "^0.13.2"
   },
   "devDependencies": {
+    "babel-core": "^5.1.11",
+    "babel-loader": "^5.0.0",
     "browserify": "^9.0.3",
-    "gulp": "^3.8.11",
-    "reactify": "^1.0.0",
-    "vinyl-source-stream": "^1.0.0"
+    "expect": "^1.6.0",
+    "karma": "^0.12.31",
+    "karma-chrome-launcher": "^0.1.8",
+    "karma-cli": "0.0.4",
+    "karma-mocha": "^0.1.10",
+    "karma-sourcemap-loader": "^0.3.4",
+    "karma-webpack": "^1.5.0",
+    "mocha": "^2.2.4",
+    "vinyl-source-stream": "^1.0.0",
+    "webpack": "^1.8.9"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "karma start --single-run=false",
+    "examples": "webpack --config ./examples/webpack.config.js --progress"
   },
   "repository": {
     "type": "git",
