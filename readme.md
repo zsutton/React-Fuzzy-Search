@@ -42,7 +42,9 @@ That means no additional configuration of a path to the worker.js file. There is
           onChange={this.onSearchChange} // Item selected callback
           placeholder="Search..." 
           removePunctuation={true} // If true remove punctuation from the search field
-          *searchField="name" // The name of the property to search
+          resultsComponent={FuzzySearchResult} // A li by default, use a custom results component
+          resultsComponentProps={{}} // Pass props from parent to a custom result component
+          *searchField="name" // The name of the property to search. (Can now be an array of strings)
           showScore={false} // If true show the calculated score next to each result. For debugging
           threadCount={2} // If using webworkers, the number of threads
           useWebWorkers={true} // Internally FuzzySearch will check for web worker support so this can be set for all browsers.
