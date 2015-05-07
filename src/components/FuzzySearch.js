@@ -11,6 +11,12 @@ var _canUseWorkers = !!window.Worker && !/MSIE/i.test(navigator.userAgent);
 
 var punctuationRE = /[^\w ]/g
 
+function extend(dest, src){
+	for(var p in src)
+		dest[p] = src[p];
+	return dest;
+}
+
 function computeSearchValues(items, opts){
 	var { field, searchField, delim, immutable, removePunctuation, useWebWorkers, searchLowerCase, threadCount } = opts;
 
@@ -28,7 +34,9 @@ function computeSearchValues(items, opts){
 			added = {};
 		_searchItems.push({ _originalItem: item, _searchValues })
 
-		var curSearchField = item[searchField]
+		var curSearchField = Object.prototype.toString.call(searchField) === '[object Array]' ?
+			searchField.reduce((acc, f) => acc + item[f] + " ", "") : 
+			item[searchField]
 
 		if(removePunctuation)
 			curSearchField = curSearchField.replace(punctuationRE, "")
@@ -117,6 +125,7 @@ var FuzzySearch = React.createClass({
 			maxItems: 25,
 			minScore: .7,
 			resultsComponent: FuzzySearchResult,
+			resultsComponentProps: {},
 			searchLowerCase: true,
 			threadCount: 2,
 			useWebWorkers: !!window.Worker
@@ -262,15 +271,20 @@ var FuzzySearch = React.createClass({
 					<ul className="fuzzy-results-cont">
 						{ items.map(function(result) {
 							return (
-								React.createElement(this.props.resultsComponent, {
-									key: result._originalItem[this.props.idField],
-									nameField: this.props.nameField,
-									item: result._originalItem,
-									score: result._score,
-									selected: result._originalItem == this.state.selectedItem,
-									selectItem: this.selectItem,
-									showScore: this.props.showScore
-								})
+								React.createElement(this.props.resultsComponent, 
+									extend(
+										{
+											key: result._originalItem[this.props.idField],
+											nameField: this.props.nameField,
+											item: result._originalItem,
+											score: result._score,
+											selected: result._originalItem == this.state.selectedItem,
+											selectItem: this.selectItem,
+											showScore: this.props.showScore
+										},
+										this.props.resultsComponentProps
+									)
+								)
 							)
 						}, this)}
 					</ul>
