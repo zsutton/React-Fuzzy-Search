@@ -1,6 +1,6 @@
 {
   "name": "react-fuzzy-search",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "description": "A fuzzy search input",
   "main": "./src/index",
   "dependencies": {
