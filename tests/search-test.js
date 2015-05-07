@@ -5,7 +5,7 @@ var FuzzySearch = require("../src/index")
 var _testData = require("./data")
 
 
-function createComponent(onChange){
+function createComponent(onChange, resultsComponent, resultsComponentProps){
 	return (
 		<FuzzySearch
           idField="id" // The name of the id (or other field) per object in the items array to use as a key property for results)
@@ -15,6 +15,8 @@ function createComponent(onChange){
           minScore={.7} // The minimum score to place in the list. minScore is multiplied by the number of search terms.
           onChange={onChange} // Item selected callback
           placeholder="Search..." 
+          resultsComponent={resultsComponent}
+          resultsComponentProps={resultsComponentProps}
           searchField="n" // The name of the property to search
         />
 	);
@@ -80,6 +82,25 @@ describe("Search arbritary data and find best matches", function(){
 			expect(results.some(n => n.getDOMNode().textContent == "Dong Schwartz")).toBe(false)
 			done();
 		}, 300)
+	})
+
+	it("Uses a custom component passed as resultsComponent", function(done){
+		var customComponent = React.createClass({
+			render: function() { return <div className="custom-component" />}
+		})
+		var fuzzySearch = TestUtils.renderIntoDocument(createComponent(null, customComponent));
+		var inp = TestUtils.findRenderedDOMComponentWithClass(fuzzySearch, "fuzzy-inp")
+
+
+		TestUtils.Simulate.focus(inp)
+        TestUtils.Simulate.change(inp, { target: { value: "doreen levine"}})
+
+        setTimeout(function(){
+			var renderedCustomComponent = TestUtils.scryRenderedDOMComponentsWithClass(fuzzySearch, "custom-component")
+			expect(renderedCustomComponent.length).toBe(25)
+			done();
+		}, 300)
+
 	})
 
 	afterEach(function(done){
