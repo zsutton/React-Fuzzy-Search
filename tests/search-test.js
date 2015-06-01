@@ -97,7 +97,7 @@ describe("Search arbritary data and find best matches", function(){
 
         setTimeout(function(){
 			var renderedCustomComponent = TestUtils.scryRenderedDOMComponentsWithClass(fuzzySearch, "custom-component")
-			expect(renderedCustomComponent.length).toBe(25)
+			expect(renderedCustomComponent.length).toBe(12)
 			done();
 		}, 300)
 
