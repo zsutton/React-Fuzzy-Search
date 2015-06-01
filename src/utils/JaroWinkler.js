@@ -68,7 +68,60 @@ var jw = {
 				return ((matches / str1.length) + (matches / str2.length) + ((matches - transpositions) / matches)) / 3;
 			}
 		}
+	},
+
+	getStringMatches (str1, str2 ){
+		if(str1 == str2)
+			return str1.split().map(ch => ({ character: ch, isMatch: true, isTransposition: false }))
+		else if(!str1.length || !str2.length)
+			return str1.split().map(ch => ({ character: ch, isMatch: false, isTransposition: false }))
+		else{
+			var matchWindow = Math.max(0, Math.floor((Math.max(str1.length, str2.length) / 2) - 1)),
+				str1Flags = {},
+				str2Flags = {},
+				matches = 0;
+	  
+			for(var i = 0; i < str1.length; i++){
+				var start = i > matchWindow ? i - matchWindow : 0,
+					end = i + matchWindow < str2.length ? i + matchWindow : str2.length - 1;
+
+				for(var j = start; j < end + 1; j++){
+					if(!str2Flags[j] && str2[j] == str1[i]){
+						str1Flags[i] = str2Flags[j] = true;
+						matches++;
+						break;
+					}
+				}
+			}
+
+			if(!matches){
+				return str1.split().map(ch => ({ character: ch, isMatch: false, isTransposition: false }))
+			}
+			else{
+				var transpositions = 0,
+					str2Offset = 0,
+					characters = [];
+
+				for(var i = 0; i < str1.length; i++){
+					if(str1Flags[i]){
+						for(var j = str2Offset; j < str2.length; j++){
+							if(str2Flags[j]){
+								str2Offset = j + 1;
+								break;
+							}
+						}
+						if(str1[i] != str2[j])
+							characters.push({ character: str1[i], isMatch: false, isTransposition: true })
+						else
+							characters.push({ character: str1[i], isMatch: true, isTransposition: false })
+					}
+					else{
+						characters.push({ character: str1[i], isMatch: false, isTransposition: false })
+					}
+				}
+
+				return characters;
+			}
+		}
 	}
 }
-
-module.exports = jw
