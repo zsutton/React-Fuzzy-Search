@@ -25,7 +25,7 @@
   },
   "scripts": {
     "test": "karma start --single-run=false",
-    "examples": "webpack --config ./examples/webpack.config.js --progress"
+    "examples": "webpack --w --config ./examples/webpack.config.js --progress"
   },
   "repository": {
     "type": "git",

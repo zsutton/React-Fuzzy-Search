@@ -41,6 +41,10 @@
     font-size: 15px;
 }
 
+.fuzzy-search-result-highlighted{
+    background-color: #ddf;
+}
+
 .fuzzy-search-result:hover{
     background-color: #eee;
     cursor: pointer;

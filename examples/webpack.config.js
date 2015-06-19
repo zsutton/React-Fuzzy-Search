@@ -28,7 +28,7 @@ if(process.env.NODE_ENV === 'production') {
     ]);
 }
 else {
-    config.devtool = 'sourcemap';
+    config.devtool = 'eval';
     config.debug = true;
 }
 

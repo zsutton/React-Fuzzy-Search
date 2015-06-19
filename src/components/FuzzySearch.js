@@ -77,8 +77,12 @@ function computeSearchValues(items, opts){
 
 var FuzzySearchResult = React.createClass({
 	render: function(){
+		var classes = cx("fuzzy-search-result", {
+			"fuzzy-search-result-highlighted": this.props.highlighted
+		})
+
 		return (
-			<li className="fuzzy-search-result" onClick={this.props.selectItem && this.select} style={this.props.style}>
+			<li className={classes} onClick={this.props.selectItem && this.select} style={this.props.style}>
 				<div className="inline-top" style={{ paddingLeft: 4, marginTop:2 }}>
 					<div>
 						{ this.props.item[this.props.nameField] + (this.props.showScore ? this.props.score : '' ) }
@@ -102,6 +106,7 @@ var FuzzySearch = React.createClass({
 			computing: true,
 			results: [],
 			searchTerm: "",
+			highlightedIdx: -1,
 			threadID: 0,
 			threadResults: {}
 		}
@@ -219,7 +224,7 @@ var FuzzySearch = React.createClass({
 					})
 
 					this._threads.push({ worker })
-					}
+				}
 				catch(e){
 					// if(e.code == 18){
 						// TODO: handle IE10 security error
@@ -243,6 +248,11 @@ var FuzzySearch = React.createClass({
 		}
 	},
 
+	_updateScrollTop () {
+		if(this.refs.cont)
+        	this.refs.cont.getDOMNode().scrollTop = Math.max(0, this.state.highlightedIdx - 5) * 28
+    },
+
 	render: function () {
 		var items = this.getItems(),
 			inactive = this.state.selectedItem && !this.state.active,
@@ -259,6 +269,7 @@ var FuzzySearch = React.createClass({
 					disabled={this.state.computing}
 					onChange={this.search}
 					onFocus={this.setActive}
+					onKeyDown={this.handleSpecialKeys}
 					ref="input"
 					type="text"
 					value={inactive ?
@@ -268,13 +279,14 @@ var FuzzySearch = React.createClass({
 				/>
 				
 				{ this.state.active &&
-					<ul className="fuzzy-results-cont">
-						{ items.map(function(result) {
+					<ul className="fuzzy-results-cont" ref="cont">
+						{ items.map(function(result, idx) {
 							return (
 								React.createElement(this.props.resultsComponent, 
 									extend(
 										{
 											key: result._originalItem[this.props.idField],
+											highlighted: idx == this.state.highlightedIdx,
 											nameField: this.props.nameField,
 											item: result._originalItem,
 											score: result._score,
@@ -315,6 +327,38 @@ var FuzzySearch = React.createClass({
 				.split(" ")
 				.filter(function(term) { return term.length > 0 })
 				.map(function(term) { return term.toLowerCase() });
+	},
+
+	handleSpecialKeys (e) {
+		if(e.keyCode == 13){
+            if(this.state.highlightedIdx >= 0){
+    			var items = this.getItems(),
+    				selectedItem = items[this.state.highlightedIdx];
+
+    			if(selectedItem)
+    				this.selectItem(selectedItem._originalItem)
+
+    			this.refs.input.getDOMNode().blur()
+
+    			e.stopPropagation();
+                e.preventDefault();
+            }
+		}
+		else if(e.keyCode == 40 || e.keyCode == 38){
+			var highlightedIdx = (
+                Math.min(
+                    this.getItems().length - 1,
+                    Math.max(
+                        0,
+                        this.state.highlightedIdx + (e.keyCode == 40 ? 1 : -1)
+                    )
+                )
+            )
+
+			this.setState({ highlightedIdx }, this._updateScrollTop);
+			e.stopPropagation();
+            e.preventDefault();
+		}
 	},
 
 	runSearch: function(searchTerms){
@@ -415,7 +459,8 @@ var FuzzySearch = React.createClass({
 
 	setActive: function (e) {
 		this.setState({
-			active: true
+			active: true,
+			highlightedIdx: 0
 		});
 
 		if(this.props.onFocus)
@@ -426,7 +471,8 @@ var FuzzySearch = React.createClass({
 
 	setInactive: function (e) {
 		this.setState({
-			active: false
+			active: false,
+			highlightedIdx: -1
 		});
 
 		if(this.props.onBlur)
